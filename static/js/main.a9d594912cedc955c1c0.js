@@ -11350,7 +11350,7 @@
                                         Q.onAccountReady.call(e)
                                     }))
                             })), this.on("appready", (function() {
-                                Q.initBoundsWatching.call(e), W.rootGet("openWizard") && (W.rootRemove("openWizard"), e.trigger("devicecreate", {
+                                Q.initBoundsWatching.call(e), Q.initObjStatsBar.call(e), W.rootGet("openWizard") && (W.rootRemove("openWizard"), e.trigger("devicecreate", {
                                     objType: e.TYPE_MOBILE
                                 }))
                             }))
@@ -11944,6 +11944,56 @@
                                 }
                             })))
                         }))
+                    }
+                    , initObjStatsBar: function() {
+                        var app = this;
+                        if (!app.hasModule("stat")) return;
+                        var _armedObjs = [], _disarmedObjs = [];
+                        var _statsXhr = null;
+                        function doUpdate() {
+                            if (_statsXhr) return;
+                            var sm = app.modules && app.modules.stat;
+                            var tree = sm && sm.modules && sm.modules.tree;
+                            if (!tree || !tree.items || !tree.items.length) return;
+                            var ids = [];
+                            tree.items.each(function(m) { if (!m.get("isgroup")) ids.push(m.id); });
+                            if (!ids.length) return;
+                            _statsXhr = v.ajax({
+                                url: App.getBaseUrl() + "objects/obj/",
+                                data: { objectId: ids }
+                            }).done(function(resp) {
+                                if (!resp || !resp.length) return;
+                                var total = 0, armed = 0, disarmed = 0;
+                                _armedObjs = []; _disarmedObjs = [];
+                                for (var j = 0; j < resp.length; j++) {
+                                    var obj = resp[j];
+                                    var ig = obj.objectState ? obj.objectState.isGuarded : 0;
+                                    total++;
+                                    if (ig > 0) { armed++; _armedObjs.push(obj); }
+                                    else { disarmed++; _disarmedObjs.push(obj); }
+                                }
+                                v("#stat-total-val").text(total);
+                                v("#stat-armed-val").text(armed);
+                                v("#stat-disarmed-val").text(disarmed);
+                                v("#stat-armed-val").closest(".obj-stat-item").data("fobjs", _armedObjs);
+                                v("#stat-disarmed-val").closest(".obj-stat-item").data("fobjs", _disarmedObjs);
+                            }).always(function() { _statsXhr = null; });
+                        }
+                        setTimeout(doUpdate, 2000);
+                        setInterval(doUpdate, 5000);
+                        if(app.getStorage().get("showObjStatsBar")!==false){v("#obj-stats-bar").show();}
+                        v("#obj-stats-bar").on("click", ".clickable", function() {
+                            var btn = v(this), isActive = btn.hasClass("active-filter");
+                            v("#obj-stats-bar .clickable").removeClass("active-filter");
+                            var sm = app.modules && app.modules.stat;
+                            var watched = sm && sm.modules && sm.modules.watched;
+                            if (isActive) { if (watched) watched.setItems([]); }
+                            else {
+                                btn.addClass("active-filter");
+                                var objs = btn.data("fobjs");
+                                if (objs && objs.length) App.trigger("showobjects", objs);
+                            }
+                        });
                     }
                     , logout: function() {
                         W.rootRemove("user")
