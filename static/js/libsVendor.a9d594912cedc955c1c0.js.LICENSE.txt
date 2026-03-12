@@ -1,0 +1,34 @@
+/*!
+   Colorbox 1.5.14
+   license: MIT
+   http://www.jacklmoore.com/colorbox
+   */
+
+/*! @source http://purl.eligrey.com/github/Blob.js/blob/master/Blob.js */
+
+/*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
+
+/** @license
+ * RequireJS plugin for async dependency load like JSONP and Google Maps
+ * Author: Miller Medeiros
+ * Version: 0.1.1 (2011/11/17)
+ * Released under the MIT license
+ */
+
+//! author : Lorenzo : https://github.com/aliem
+
+//! author: Mattia Larentis: https://github.com/nostalgiaz
+
+//! authors : Tim Wood, Iskren Chernev, Moment.js contributors
+
+//! license : MIT
+
+//! locale : italian (it)
+
+//! moment.js
+
+//! moment.js locale configuration
+
+//! momentjs.com
+
+//! version : 2.10.6

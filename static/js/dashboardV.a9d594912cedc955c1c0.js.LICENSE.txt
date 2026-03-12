@@ -1,0 +1,3 @@
+//!!! May be usefull for sorting http://gridster.net/, http://ubervu.github.io/grid/
+
+//!!! sum may be not 100 due to round

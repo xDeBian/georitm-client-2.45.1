@@ -1,0 +1,5 @@
+//!!! Attention code of plugin modified
+
+//!!! jquery ui selfmade popover is used based on context menu
+
+//!!! this is async

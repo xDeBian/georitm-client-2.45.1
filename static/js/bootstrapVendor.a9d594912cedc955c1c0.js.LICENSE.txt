@@ -1,0 +1,8 @@
+/*!
+ * Based on Timepicker Component for Twitter Bootstrap
+* !!! Modified for gr. LEFT '0' ADDED TO HOURS
+* !!! Depends on Number.prototype.padLeft
+* !!! Also triggering of events changed
+ *
+ *
+ */

@@ -1,0 +1,23 @@
+===== CHANGE LOG =====
+Date: 06.03.2026
+
+PROBLEM:
+  "Лента событий" (pane-right-bottom) პანელი მხოლოდ ~50%-მდე იზრდებოდა
+  მაუსით Drag-ის დროს. მეტი ზომით გაზრდა შეუძლებელი იყო.
+
+CAUSE:
+  JavaScript-ში (commonViewsV bundle) maxHeight ლიმიტი:
+    maxHeight = D.height() - 300
+  ანუ პანელს ეკრანის სიმაღლიდან 300px-ი ყოველთვის გამოაკლდებოდა.
+
+FIX:
+  ფაილი: static/js/commonViewsV.a9d594912cedc955c1c0.js
+  შეიცვალა 4 ადგილი — -300 → 0 (სულ ბოლომდე):
+    1. initRightPane()     — var t = D.height()-300  →  D.height()
+    2. initRightPane()     — setMaxRightBottomHeight(D.height()-300, false)  →  D.height()
+    3. toggleRightBottom() — setMaxRightBottomHeight(D.height()-300, true)   →  D.height()
+    4. onWindowResizeStop()— setMaxRightBottomHeight(i-300, false)           →  i
+
+RESULT:
+  "Лента событий" პანელი ახლა მთლიანად ბოლომდე ადის — Drag-ით შეიძლება
+  სრული კონტეინერის სიმაღლე დაიკავოს. ბუფერი ნული.

@@ -1,0 +1,6 @@
+{
+    "protocol": "http",
+    "host": "core.geo.ritm.ru",
+    "port": "80",
+    "connector": "restapi"
+}

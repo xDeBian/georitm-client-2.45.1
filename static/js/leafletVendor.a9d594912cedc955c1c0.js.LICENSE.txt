@@ -1,0 +1,3 @@
+//!!! changed for GR check for cached objectPoint added
+
+//!!! changed for GR check for closest.__parent added

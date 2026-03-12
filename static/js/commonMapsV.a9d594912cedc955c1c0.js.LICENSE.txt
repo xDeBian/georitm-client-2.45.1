@@ -1,0 +1,5 @@
+//!!! replace original;
+
+//!data.scode && (data.scode = this._map.scode);
+
+//!use only for secondary needs (simplification and so on....)

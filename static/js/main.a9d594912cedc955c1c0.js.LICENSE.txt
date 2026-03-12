@@ -1,0 +1,3 @@
+//!!! this is L.Draw.Circle here
+
+//!!!clone, because _channels may be changed during calling callbacks
