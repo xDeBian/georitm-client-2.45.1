@@ -8291,7 +8291,7 @@
                                 , deferRender: !1
                                 , dom: "rtS"
                                 , scrollCollapse: !1
-                                , autoWidth: !0
+                                , autoWidth: !1
                                 , scrollY: 200
                                 , language: {
                                     zeroRecords: "--"
@@ -8422,14 +8422,19 @@
                             $bTable.css({"table-layout": "fixed", width: "100%"});
                             var $hCols = $hTable.find("colgroup col");
                             var $bCols = $bTable.find("colgroup col");
-                            _cols.forEach(function(col, i) {
-                                if (col.key && _saved[col.key]) {
-                                    var w = _saved[col.key];
-                                    $hCols.eq(i).css({width: w, "min-width": w});
-                                    $bCols.eq(i).css({width: w, "min-width": w});
-                                    $gc.find(".dataTables_scrollHead thead th").eq(i).css("width", w);
-                                }
-                            });
+                            try {
+                                var _oSet = _self._grid && _self._grid.fnSettings();
+                                _cols.forEach(function(col, i) {
+                                    if (col.key && _saved[col.key]) {
+                                        var w = _saved[col.key];
+                                        $hCols.eq(i).css({width: w, "min-width": w});
+                                        $bCols.eq(i).css({width: w, "min-width": w});
+                                        $gc.find(".dataTables_scrollHead thead th").eq(i).css("width", w);
+                                        $bTable.find("thead th").eq(i).css({width: w, "min-width": w});
+                                        if (_oSet && _oSet.aoColumns[i]) _oSet.aoColumns[i].sWidth = w;
+                                    }
+                                });
+                            } catch (_ex) {}
                             try {
                                 _self._grid && _self._grid.fnAdjustColumnSizing(false);
                             } catch (ex) {}
@@ -8437,32 +8442,48 @@
 
                         setTimeout(function() {
                             _applyWidths();
-                            $hTable.colresize();
-                            $hTable.on("stop.colresize", function(ev, t) {
-                                var newW = Math.max(20, t.th[0].offsetWidth + t.delta);
-                                var w = newW + "px";
-                                t.th.css("width", w);
-                                $hTable.find("colgroup col").eq(t.index).css({width: w, "min-width": w});
-                                $bTable.find("colgroup col").eq(t.index).css({width: w, "min-width": w});
-                                $hTable.css({"table-layout": "fixed", width: "100%"});
-                                $bTable.css({"table-layout": "fixed", width: "100%"});
-                                try {
-                                    _self._grid && _self._grid.fnAdjustColumnSizing(false);
-                                } catch (ex) {}
-                                var containerW = $gc.width();
-                                if (containerW > 0) {
-                                    var _cols = u.getColumns.call(_self);
-                                    var _saved = {};
-                                    $gc.find(".dataTables_scrollHead thead th").each(function(ci) {
-                                        if (_cols[ci] && _cols[ci].key) {
-                                            _saved[_cols[ci].key] = (100 * this.offsetWidth / containerW) + "%";
-                                        }
+                            $gc.find(".cr-handle").remove();
+                            $hTable.find("thead th").not(":last").each(function(i, th) {
+                                e(th).css("position", "relative");
+                                var $h = e('<div class="cr-handle"></div>').appendTo(e(th));
+                                $h.on("mousedown", function(ev) {
+                                    ev.preventDefault();
+                                    ev.stopPropagation();
+                                    var startX = ev.clientX;
+                                    var startW = th.offsetWidth;
+                                    $hTable.css({"table-layout": "fixed", width: "100%"});
+                                    $bTable.css({"table-layout": "fixed", width: "100%"});
+                                    e(document).on("mousemove.cr" + i, function(mv) {
+                                        var newW = Math.max(60, startW + (mv.clientX - startX));
+                                        var w = newW + "px";
+                                        $gc.find(".dataTables_scrollHead thead th").eq(i).css("width", w);
+                                        $hTable.find("colgroup col").eq(i).css({width: w, "min-width": w});
+                                        $bTable.find("colgroup col").eq(i).css({width: w, "min-width": w});
+                                        $bTable.find("thead th").eq(i).css({width: w, "min-width": w});
                                     });
-                                    try {
-                                        localStorage.setItem(_lsk, JSON.stringify(_saved));
-                                    } catch (ex) {}
-                                    _self.controller.setUserData("colWidth", _saved);
-                                }
+                                    e(document).on("mouseup.cr" + i, function() {
+                                        e(document).off("mousemove.cr" + i + " mouseup.cr" + i);
+                                        var containerW = $gc.width();
+                                        if (containerW > 0) {
+                                            var _cols2 = u.getColumns.call(_self);
+                                            var _savedNew = {};
+                                            $gc.find(".dataTables_scrollHead thead th").each(function(ci) {
+                                                if (_cols2[ci] && _cols2[ci].key) {
+                                                    _savedNew[_cols2[ci].key] = (100 * this.offsetWidth / containerW) + "%";
+                                                }
+                                            });
+                                            try { localStorage.setItem(_lsk, JSON.stringify(_savedNew)); } catch (ex) {}
+                                            _self.controller.setUserData("colWidth", _savedNew);
+                                            try {
+                                                var _oSet = _self._grid.fnSettings();
+                                                $gc.find(".dataTables_scrollHead thead th").each(function(ci) {
+                                                    if (_oSet.aoColumns[ci]) _oSet.aoColumns[ci].sWidth = this.offsetWidth + "px";
+                                                });
+                                            } catch (_ex) {}
+                                        }
+                                        try { _self._grid && _self._grid.fnAdjustColumnSizing(false); } catch (ex) {}
+                                    });
+                                });
                             });
                         }, 200);
                         $t.on("draw.dt", function() {
@@ -8584,7 +8605,7 @@
                             , showCallback: function() {
                                 this.find("form")
                                     .on("submit", (function() {
-                                        return u.saveFilters.call(t), t._popup.trigger("jw.close"), !1
+                                        return u.saveFilters.call(t), t._popup.trigger("jw.close"), setTimeout(function() { location.reload(); }, 100), !1
                                     })), u.initMultiSelects.call(t)
                             }
                             , closeCallback: function() {
@@ -8597,7 +8618,8 @@
                             , t = u.serializeForm.call(this, e);
                         this.controller.setFilterValues(t);
                         this.controller.setUserData("colVisibility", t.colVisibility || {});
-                        u.applyColumnVisibility.call(this, t.colVisibility || {})
+                        u.applyColumnVisibility.call(this, t.colVisibility || {});
+                        window.location.reload();
                     }
                     , serializeForm: function(e) {
                         var t = {}
@@ -8644,6 +8666,9 @@
                                 self._grid.fnAdjustColumnSizing(false);
                             } catch (ex) {}
                             u.adjustGridSize.call(self);
+                            setTimeout(function() {
+                                u.initColResize.call(self, self.$table);
+                            }, 50);
                         }
                     }
                     , getSelectValues: function(e) {
@@ -8789,7 +8814,7 @@
     }
     , 1614: function(e, t, n) {
         (t = n(7)(!1))
-        .push([e.i, '#alerts-log {\n\n}\n.closed > #alerts-log {\n    height: 0 !important;/*GR-3107*/\n    overflow: hidden;\n\n}\n#alerts-log .module-header h2,\n#alerts-log .module-header .filters,\n#alerts-log .module-header .filter {\n    display: inline-block;\n    line-height: 30px;\n    vertical-align: middle;\n}\n\n#alerts-log .module-header h2 {\n    float: none;\n}\n\n#alerts-log .module-header .form-search {\n    /*margin-left: 15px;*/\n    position: relative;\n    left: 0;\n    right: 0;\n    padding: 4px 10px;\n    border-left: 0;\n    background: none;\n}\n\n#alerts-log .module-header .form-search .icon-clear {\n    top: 12px;\n    right: 15px;\n}\n#alerts-log .module-header .form-search .filter {\n    width: 200px;\n    margin: 0;\n}\n#alerts-log .module-header .form-search .filter.active {\n    width: 178px;\n    padding-right: 28px;\n}\n#alerts-log .module-header .form-search .filter.active + .icon-clear {\n    display: inline-block;\n}\n/*#alerts-log .btn-play-pause {\n    margin-left: 15px;\n}*/\n#alerts-log .btn-play-pause .icon-play,\n#alerts-log.paused .btn-play-pause .icon-stop {\n    display: none;\n}\n#alerts-log.paused .btn-play-pause .icon-play {\n    display: inline-block;\n}\n#alerts-log .btn-play-pause:after {\n    content: attr(data-hintstop);\n}\n#alerts-log.paused .btn-play-pause:after {\n    content: attr(data-hintresume);\n}\n\n#alerts-log .grid-content {\n    overflow-y: hidden;\n}\n\n#alerts-log thead .sorting_asc,\n#alerts-log thead .sorting_desc {\n    /* we use ordering just for correct data prepending, no manual sorting */\n    background: none;\n}\n\n#alerts-log .dataTables_scrollBody {\n    border-bottom: 0;\n}\n#alerts-log .dataTables_empty {\n    display: none;\n}\n#alerts-log .dataTables_scrollHead thead th {\n    position: relative;\n    overflow: hidden;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n}\n#alerts-log .colresize-handle {\n    position: absolute;\n    right: 0;\n    top: 0;\n    width: 6px;\n    height: 100%;\n    cursor: col-resize;\n    user-select: none;\n    z-index: 10;\n}\n#alerts-log .dataTables_scrollHead thead th:active,\n#alerts-log .dataTables_scrollHead thead th.ui-sortable-helper {\n    cursor: -webkit-grabbing;\n    cursor: grabbing;\n}\n.col-drag-ph {\n    display: inline-block !important;\n    background: #eef4ff !important;\n    border-bottom: 2px solid #4a90d9 !important;\n    box-sizing: border-box;\n    visibility: visible !important;\n}\n\n.narrow #alerts-log .module-header h2 {\n    display: none;\n}\n.narrow #alerts-log .module-header .filters {\n    margin-left: 0;\n}\n\n#win-log-filters .jw-content {\n    overflow: visible;\n}\n#win-log-filters .control-group {\n    position: relative;\n    z-index: 1;\n}\n#win-log-filters .control-group.devices {\n    z-index: 2;\n}\n#win-log-filters .row-fluid:last-child .control-group {\n    margin-bottom: 0;\n}\n#win-log-filters .control-group input[type="text"],\n#win-log-filters .control-group select {\n    margin: 0;\n}\n#win-log-filters .chosen-container .chosen-results {\n    max-height: 200px;\n}\n#win-log-filters .chosen-choices {\n    max-height: 120px;\n    overflow-y: auto;\n}\n#win-log-filters .chosen-choices .search-field input[type="text"] {\n    height: 28px;\n}\n#win-log-filters .chosen-choices .search-choice {\n    max-width: 130px;\n}\n#win-log-filters .devices .chosen-choices .search-choice {\n    max-width: 175px;\n}\n\n#win-log-filters .chzn-results li {\n    white-space: nowrap;\n}\n#win-log-filters h4 {\n    margin: 0 0 3px;\n}\n/*\n#win-log-filters .multiselect .ui-autocomplete {\n    margin-top: 1px;\n    border-top: 0;\n    border-radius: 0 0 4px 4px;\n    border-color: inherit;\n}*/\n#win-log-filters .control-group.col-visibility {\n    z-index: 0;\n}\n#win-log-filters .col-vis-list {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    border-top: 1px solid #d0d0d0;\n    border-left: 1px solid #d0d0d0;\n    margin-top: 4px;\n}\n#win-log-filters .col-vis-list label.checkbox {\n    display: flex;\n    align-items: center;\n    gap: 7px;\n    margin: 0;\n    padding: 7px 10px;\n    font-weight: normal;\n    white-space: nowrap;\n    cursor: pointer;\n    border-right: 1px solid #d0d0d0;\n    border-bottom: 1px solid #d0d0d0;\n    background: #fafafa;\n    transition: background 0.15s;\n}\n#win-log-filters .col-vis-list label.checkbox:hover {\n    background: #eef4ff;\n}\n#win-log-filters .col-vis-list label.checkbox input[type="checkbox"] {\n    margin: 0;\n    flex-shrink: 0;\n    cursor: pointer;\n}\n', ""]), e.exports = t
+        .push([e.i, '#alerts-log {\n\n}\n.closed > #alerts-log {\n    height: 0 !important;/*GR-3107*/\n    overflow: hidden;\n\n}\n#alerts-log .module-header h2,\n#alerts-log .module-header .filters,\n#alerts-log .module-header .filter {\n    display: inline-block;\n    line-height: 30px;\n    vertical-align: middle;\n}\n\n#alerts-log .module-header h2 {\n    float: none;\n}\n\n#alerts-log .module-header .form-search {\n    /*margin-left: 15px;*/\n    position: relative;\n    left: 0;\n    right: 0;\n    padding: 4px 10px;\n    border-left: 0;\n    background: none;\n}\n\n#alerts-log .module-header .form-search .icon-clear {\n    top: 12px;\n    right: 15px;\n}\n#alerts-log .module-header .form-search .filter {\n    width: 200px;\n    margin: 0;\n}\n#alerts-log .module-header .form-search .filter.active {\n    width: 178px;\n    padding-right: 28px;\n}\n#alerts-log .module-header .form-search .filter.active + .icon-clear {\n    display: inline-block;\n}\n/*#alerts-log .btn-play-pause {\n    margin-left: 15px;\n}*/\n#alerts-log .btn-play-pause .icon-play,\n#alerts-log.paused .btn-play-pause .icon-stop {\n    display: none;\n}\n#alerts-log.paused .btn-play-pause .icon-play {\n    display: inline-block;\n}\n#alerts-log .btn-play-pause:after {\n    content: attr(data-hintstop);\n}\n#alerts-log.paused .btn-play-pause:after {\n    content: attr(data-hintresume);\n}\n\n#alerts-log .grid-content {\n    overflow-y: hidden;\n}\n\n#alerts-log thead .sorting_asc,\n#alerts-log thead .sorting_desc {\n    /* we use ordering just for correct data prepending, no manual sorting */\n    background: none;\n}\n\n#alerts-log .dataTables_scrollBody {\n    border-bottom: 0;\n}\n#alerts-log .dataTables_empty {\n    display: none;\n}\n#alerts-log .dataTables_scrollHead thead th {\n    position: relative;\n    overflow: hidden;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n}\n#alerts-log .colresize-handle {\n    position: absolute;\n    right: 0;\n    top: 0;\n    width: 6px;\n    height: 100%;\n    cursor: col-resize;\n    user-select: none;\n    z-index: 10;\n}\n#alerts-log .cr-handle {\n    position: absolute;\n    right: 0;\n    top: 0;\n    width: 6px;\n    height: 100%;\n    cursor: col-resize;\n    user-select: none;\n    z-index: 10;\n    background: transparent;\n}\n#alerts-log .cr-handle:hover {\n    background: rgba(74,144,217,0.35);\n}\n#alerts-log .dataTables_scrollHead thead th:active,\n#alerts-log .dataTables_scrollHead thead th.ui-sortable-helper {\n    cursor: -webkit-grabbing;\n    cursor: grabbing;\n}\n.col-drag-ph {\n    display: inline-block !important;\n    background: #eef4ff !important;\n    border-bottom: 2px solid #4a90d9 !important;\n    box-sizing: border-box;\n    visibility: visible !important;\n}\n\n.narrow #alerts-log .module-header h2 {\n    display: none;\n}\n.narrow #alerts-log .module-header .filters {\n    margin-left: 0;\n}\n\n#win-log-filters .jw-content {\n    overflow: visible;\n}\n#win-log-filters .control-group {\n    position: relative;\n    z-index: 1;\n}\n#win-log-filters .control-group.devices {\n    z-index: 2;\n}\n#win-log-filters .row-fluid:last-child .control-group {\n    margin-bottom: 0;\n}\n#win-log-filters .control-group input[type="text"],\n#win-log-filters .control-group select {\n    margin: 0;\n}\n#win-log-filters .chosen-container .chosen-results {\n    max-height: 200px;\n}\n#win-log-filters .chosen-choices {\n    max-height: 120px;\n    overflow-y: auto;\n}\n#win-log-filters .chosen-choices .search-field input[type="text"] {\n    height: 28px;\n}\n#win-log-filters .chosen-choices .search-choice {\n    max-width: 130px;\n}\n#win-log-filters .devices .chosen-choices .search-choice {\n    max-width: 175px;\n}\n\n#win-log-filters .chzn-results li {\n    white-space: nowrap;\n}\n#win-log-filters h4 {\n    margin: 0 0 3px;\n}\n/*\n#win-log-filters .multiselect .ui-autocomplete {\n    margin-top: 1px;\n    border-top: 0;\n    border-radius: 0 0 4px 4px;\n    border-color: inherit;\n}*/\n#win-log-filters .control-group.col-visibility {\n    z-index: 0;\n}\n#win-log-filters .col-vis-list {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    border-top: 1px solid #d0d0d0;\n    border-left: 1px solid #d0d0d0;\n    margin-top: 4px;\n}\n#win-log-filters .col-vis-list label.checkbox {\n    display: flex;\n    align-items: center;\n    gap: 7px;\n    margin: 0;\n    padding: 7px 10px;\n    font-weight: normal;\n    white-space: nowrap;\n    cursor: pointer;\n    border-right: 1px solid #d0d0d0;\n    border-bottom: 1px solid #d0d0d0;\n    background: #fafafa;\n    transition: background 0.15s;\n}\n#win-log-filters .col-vis-list label.checkbox:hover {\n    background: #eef4ff;\n}\n#win-log-filters .col-vis-list label.checkbox input[type="checkbox"] {\n    margin: 0;\n    flex-shrink: 0;\n    cursor: pointer;\n}\n', ""]), e.exports = t
     }
     , 172: function(e, t, n) {
         var i, o;
@@ -11397,14 +11422,14 @@
                                 "webrtc" === n || "ritmrtp" === n ? Q.openRitmVideo.call(e, t, n) : "ivideon" === n ? Q.openIvideonVideo.call(e, t) : "direct" === n && Q.openDirectVideo.call(e, t)
                             })), e.allowed("objects.shell") && t.push("setup");
                             var i = e.getUserData("startWithDashboard");
-                            b.isBoolean(i) && e.set("startWithDashboard", i), e.set("showAlertsLog", !0 === e.getUserData("showAlertsLog")), e.on("change:startWithDashboard", (function(t, n) {
+                            b.isBoolean(i) && e.set("startWithDashboard", i), e.set("showAlertsLog", !1 !== e.getUserData("showAlertsLog")), e.on("change:startWithDashboard", (function(t, n) {
                                     e.setUserData("startWithDashboard", n)
                                 }))
                                 .on("change:showAlertsLog", (function(t, n) {
                                     e.setUserData("showAlertsLog", n), n && !e.modules.log ? Q.openAlertsLog.call(e) : !n && e.modules.log && e.modules.log.destroy()
                                 }));
-                            var o = e.getUserData("objType") || "mobile";
-                            e.hasModule(o) || (o = "mobile" == o ? "stat" : "mobile"), e.set("objType", o)
+                            var o = e.getUserData("objType") || "stat";
+                            e.hasModule(o) || (o = "stat" == o ? "mobile" : "stat"), e.set("objType", o)
                         }
                         e._hasModules = t, e._view.render(), Q.addRoutes.call(e), Q.processGETParams.call(e), Q.buildModules.call(e), e.listenTo(q, "change:basic", (function(e, t) {
                             var n = W.rootGet("user");
