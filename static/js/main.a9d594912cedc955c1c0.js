@@ -8273,6 +8273,7 @@
                         this._serverDataReceived = false;
                         try {
                             var _lr = JSON.parse(localStorage.getItem("georitm_alerts_rows") || "[]");
+                            _lr.sort(function(a, b) { return (b.alertTs || 0) - (a.alertTs || 0); });
                             if (_lr.length) {
                                 var _na = this.$table.DataTable();
                                 var _lrSelf = this;
@@ -8311,6 +8312,10 @@
                                 , scrollY: 200
                                 , language: {
                                     zeroRecords: "--"
+                                }
+                                , fnPreDrawCallback: function(o) {
+                                    var a = o.aoData, c = function(p, q) { return ((a[q] && a[q]._aData && a[q]._aData.alertTs) || 0) - ((a[p] && a[p]._aData && a[p]._aData.alertTs) || 0); };
+                                    o.aiDisplayMaster.sort(c); o.aiDisplay.sort(c);
                                 }
                             };
                         this._grid = n.dataTable(i), u.initColResize.call(this, n), u.initColReorder.call(this, n), setTimeout((function() {
@@ -8586,18 +8591,39 @@
                                 , a = this.$table.DataTable();
                             if (!this._serverDataReceived) {
                                 this._serverDataReceived = true;
+                                var _cached = [];
+                                try { _cached = JSON.parse(localStorage.getItem("georitm_alerts_rows") || "[]"); } catch (_le) {}
+                                var _idMap = {};
+                                _cached.forEach(function(cr) { if (cr.alertId) _idMap[cr.alertId] = cr; });
+                                for (var l = 0, c = e.length; l < c; l++) {
+                                    i = e[l];
+                                    if (o.alertMatchFilter(i) && (t = App.getDevice(i.objectId))) {
+                                        i.extId = t.get("extId"); i.objTitle = App.buildObjTitle(t);
+                                        i.code = i.code || ""; n = o.getGroupByCode(i.code);
+                                        i.group = n ? n.name : "Unknown";
+                                        if (i.alertId) _idMap[i.alertId] = i;
+                                    }
+                                }
+                                var _merged = Object.keys(_idMap).map(function(k) { return _idMap[k]; });
+                                _merged.sort(function(a, b) { return (b.alertTs || 0) - (a.alertTs || 0); });
+                                _merged = _merged.slice(0, r);
                                 u.clearList.call(this);
                                 a = this.$table.DataTable();
+                                var _self = this;
+                                _merged.slice().reverse().forEach(function(row) { a.row.prependAlertRow(row); _self._count++; });
+                                this._count = _merged.length;
+                                try { localStorage.setItem("georitm_alerts_rows", JSON.stringify(_merged.slice(0, 300))); } catch (_re) {}
+                            } else {
+                                var s = this._count + e.length - r;
+                                s > 0 && a.removeLast(s);
+                                for (var l = 0, c = e.length; l < c; l++) i = e[l], o.alertMatchFilter(i) && (t = App.getDevice(i.objectId)) && (i.extId = t.get("extId"), i.objTitle = App.buildObjTitle(t), i.code = i.code || "", n = o.getGroupByCode(i.code), i.group = n ? n.name : "Unknown", a.row.prependAlertRow(i), this._count++);
+                                s > 0 && (this._count = r);
+                                try {
+                                    var _ar = a.data().toArray();
+                                    _ar.sort(function(a, b) { return (b.alertTs || 0) - (a.alertTs || 0); });
+                                    localStorage.setItem("georitm_alerts_rows", JSON.stringify(_ar.slice(0, 300)));
+                                } catch (_re) {}
                             }
-                            var s = this._count + e.length - r;
-                            s > 0 && a.removeLast(s);
-                            for (var l = 0, c = e.length; l < c; l++) i = e[l], o.alertMatchFilter(i) && (t = App.getDevice(i.objectId)) && (i.extId = t.get("extId"), i.objTitle = App.buildObjTitle(t), i.code = i.code || "", n = o.getGroupByCode(i.code), i.group = n ? n.name : "Unknown", a.row.prependAlertRow(i), this._count++);
-                            s > 0 && (this._count = r);
-                            try {
-                                var _ar = a.data()
-                                    .toArray();
-                                localStorage.setItem("georitm_alerts_rows", JSON.stringify(_ar.slice(0, 300)));
-                            } catch (_re) {}
                         }
                     }
                     , openSettings: function() {
@@ -11350,7 +11376,7 @@
                                         Q.onAccountReady.call(e)
                                     }))
                             })), this.on("appready", (function() {
-                                Q.initBoundsWatching.call(e), Q.initObjStatsBar.call(e), W.rootGet("openWizard") && (W.rootRemove("openWizard"), e.trigger("devicecreate", {
+                                Q.startAutoReload.call(e), App._startAutoReload = function(){ Q.startAutoReload.call(e); }, Q.initBoundsWatching.call(e), Q.initObjStatsBar.call(e), W.rootGet("openWizard") && (W.rootRemove("openWizard"), e.trigger("devicecreate", {
                                     objType: e.TYPE_MOBILE
                                 }))
                             }))
@@ -11944,6 +11970,15 @@
                                 }
                             })))
                         }))
+                    }
+                    , _autoReloadTimer: null
+                    , startAutoReload: function() {
+                        if (Q._autoReloadTimer) { clearTimeout(Q._autoReloadTimer); Q._autoReloadTimer = null; }
+                        var enabled = App.getStorage().get("autoReload");
+                        if (enabled !== false) {
+                            var mins = parseInt(App.getStorage().get("autoReloadInterval")) || 30;
+                            Q._autoReloadTimer = setTimeout(function() { window.location.reload(); }, mins * 60 * 1e3);
+                        }
                     }
                     , initObjStatsBar: function() {
                         var app = this;
