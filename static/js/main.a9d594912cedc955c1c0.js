@@ -12002,10 +12002,11 @@
                                 _armedObjs = []; _disarmedObjs = [];
                                 for (var j = 0; j < resp.length; j++) {
                                     var obj = resp[j];
-                                    var ig = obj.objectState ? obj.objectState.isGuarded : 0;
+                                    if (!obj.objStatus) continue;
+                                    var ig = obj.isGuarded !== undefined ? obj.isGuarded : (obj.objectState ? obj.objectState.isGuarded : 0);
                                     total++;
-                                    if (ig > 0) { armed++; _armedObjs.push(obj); }
-                                    else { disarmed++; _disarmedObjs.push(obj); }
+                                    if (ig === 1) { armed++; _armedObjs.push(obj); }
+                                    else if (ig === 2) { disarmed++; _disarmedObjs.push(obj); }
                                 }
                                 v("#stat-total-val").text(total);
                                 v("#stat-armed-val").text(armed);
@@ -12022,10 +12023,23 @@
                             v("#obj-stats-bar .clickable").removeClass("active-filter");
                             var sm = app.modules && app.modules.stat;
                             var watched = sm && sm.modules && sm.modules.watched;
-                            if (isActive) { if (watched) watched.setItems([]); }
-                            else {
+                            var tree = sm && sm.modules && sm.modules.tree;
+                            var dv = tree && tree.dataView;
+                            if (isActive) {
+                                if (watched) watched.setItems([]);
+                                if (dv) { dv.setFilter(null); dv.refresh(); }
+                            } else {
                                 btn.addClass("active-filter");
                                 var objs = btn.data("fobjs");
+                                if (dv && objs && objs.length) {
+                                    var fIds = {};
+                                    for (var k = 0; k < objs.length; k++) fIds[objs[k].id] = true;
+                                    var _fIds = fIds;
+                                    dv.setFilter(function(item) {
+                                        return item.isgroup || item.checked === 1 || !!_fIds[item.id];
+                                    });
+                                    dv.refresh();
+                                }
                                 if (objs && objs.length) App.trigger("showobjects", objs);
                             }
                         });
